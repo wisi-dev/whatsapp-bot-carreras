@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simulador del bot</title>
+<style>
+  :root {
+    --wa-green: #008069;
+    --wa-bg: #efeae2;
+    --bubble-in: #ffffff;
+    --bubble-out: #d9fdd3;
+    --link: #027eb5;
+    --text: #111b21;
+    --muted: #667781;
+    --line: #e9edef;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: "Segoe UI", Helvetica, Arial, sans-serif; color: var(--text);
+    background: #d1d7db; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  }
+  .toolbar {
+    width: 100%; max-width: 520px; padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px 14px;
+    align-items: center; font-size: 13px; color: #3b4a54;
+  }
+  .toolbar label { display: flex; align-items: center; gap: 6px; }
+  .toolbar input[type=text], .toolbar input[type=date] {
+    border: 1px solid #b8c2c8; border-radius: 6px; padding: 4px 6px; font: inherit; background: #fff;
+  }
+  .toolbar input[type=text] { width: 130px; }
+  .toolbar button {
+    margin-left: auto; border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer;
+    background: #fff; color: var(--wa-green); font-weight: 600; font-size: 13px;
+  }
+  .phone {
+    width: 100%; max-width: 520px; flex: 1; display: flex; flex-direction: column;
+    background: var(--wa-bg); box-shadow: 0 1px 8px rgba(0,0,0,.15); min-height: 0; height: calc(100vh - 60px);
+  }
+  header {
+    background: var(--wa-green); color: #fff; padding: 10px 16px; display: flex; gap: 12px; align-items: center;
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%; background: #dfe5e7; color: var(--wa-green);
+    display: grid; place-items: center; font-size: 20px; flex: none;
+  }
+  header .name { font-weight: 600; font-size: 16px; }
+  header .status { font-size: 12px; opacity: .85; }
+  .banner {
+    background: #fff8c4; color: #54656f; font-size: 12px; text-align: center; padding: 6px 12px;
+    border-bottom: 1px solid #f0e6a0;
+  }
+  #chat { flex: 1; overflow-y: auto; padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; flex-direction: column; max-width: 85%; }
+  .row.in { align-self: flex-start; }
+  .row.out { align-self: flex-end; align-items: flex-end; }
+  .bubble {
+    padding: 6px 9px 4px; border-radius: 8px; font-size: 14.2px; line-height: 1.38;
+    box-shadow: 0 1px .5px rgba(11,20,26,.13); word-wrap: break-word; overflow-wrap: anywhere;
+  }
+  .in .bubble { background: var(--bubble-in); border-top-left-radius: 0; }
+  .out .bubble { background: var(--bubble-out); border-top-right-radius: 0; }
+  .bubble .hdr { font-weight: 600; margin-bottom: 2px; }
+  .bubble .ftr { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .bubble a { color: var(--link); }
+  .time { display: block; text-align: right; margin-top: 1px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .wa-btns { display: flex; flex-direction: column; gap: 2px; margin-top: 2px; width: 100%; }
+  .wa-btn {
+    background: var(--bubble-in); border: 0; color: var(--link); font: inherit; font-size: 14px; padding: 9px;
+    border-radius: 8px; cursor: pointer; box-shadow: 0 1px .5px rgba(11,20,26,.13); width: 100%;
+  }
+  .wa-btn:hover { background: #f5f6f6; }
+  .wa-btn.list-open { border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; margin-top: -2px; box-shadow: none; }
+  .in .bubble.has-list { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+  .system {
+    align-self: center; max-width: 90%; background: #fff3c4; color: #54656f; font-size: 12.5px;
+    border-radius: 8px; padding: 6px 10px; box-shadow: 0 1px .5px rgba(11,20,26,.13);
+  }
+  .system b { color: #3b4a54; }
+  details.json { display: none; margin-top: 3px; font-size: 12px; }
+  .show-json details.json { display: block; }
+  details.json summary { cursor: pointer; color: var(--muted); }
+  details.json pre {
+    background: #1f2c33; color: #d1f4cc; padding: 8px; border-radius: 6px; max-width: 100%;
+    overflow-x: auto; font-size: 11.5px; margin: 4px 0 0;
+  }
+  .typing { align-self: flex-start; color: var(--muted); font-size: 13px; font-style: italic; padding: 2px 4px; }
+  form {
+    display: flex; gap: 8px; padding: 8px 10px; background: #f0f2f5; align-items: center;
+  }
+  form input {
+    flex: 1; border: 0; border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 15px; outline: none;
+  }
+  form button {
+    width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--wa-green); color: #fff;
+    cursor: pointer; font-size: 18px; flex: none;
+  }
+  form .ghost { background: transparent; color: var(--muted); font-size: 20px; }
+  /* Hoja de la lista */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .sheet {
+    background: #fff; width: 100%; max-width: 520px; border-radius: 14px 14px 0 0; max-height: 80vh; overflow-y: auto;
+    padding-bottom: 12px;
+  }
+  .sheet-title {
+    text-align: center; font-weight: 600; padding: 14px; border-bottom: 1px solid var(--line); position: relative;
+  }
+  .sheet-title button {
+    position: absolute; left: 12px; top: 10px; border: 0; background: none; font-size: 20px; cursor: pointer; color: var(--muted);
+  }
+  .section-title { color: var(--wa-green); font-size: 14px; padding: 14px 20px 6px; }
+  .opt { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 10px 20px; cursor: pointer; font: inherit; }
+  .opt:hover { background: #f5f6f6; }
+  .opt .t { font-size: 15px; }
+  .opt .d { font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+  <div class="toolbar">
+    <label>Nombre de perfil <input type="text" id="perfil" value="Lautaro"></label>
+    <label title="Para probar cómo responde 'Fecha de cursado' en otro día">Fecha simulada <input type="date" id="fecha"></label>
+    <label><input type="checkbox" id="verJson"> Ver JSON</label>
+    <button type="button" id="reiniciar">↺ Reiniciar</button>
+  </div>
+
+  <div class="phone" id="phone">
+    <header>
+      <div class="avatar">🎓</div>
+      <div>
+        <div class="name">Bot de carreras</div>
+        <div class="status">en línea</div>
+      </div>
+    </header>
+    <div class="banner">🧪 Simulador local: nada de lo que escribas se envía a Meta ni a WhatsApp.</div>
+    <div id="chat"></div>
+    <form id="form" autocomplete="off">
+      <button type="button" class="ghost" id="audio" title="Simular que el cliente manda un audio">🎤</button>
+      <input id="input" placeholder="Escribí un mensaje como si fueras el cliente">
+      <button type="submit" title="Enviar">➤</button>
+    </form>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="sheet" id="sheet"></div>
+  </div>
+
+<script>
+  const FROM = '5490000000001';
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('input');
+  const overlay = document.getElementById('overlay');
+  const sheet = document.getElementById('sheet');
+  let busy = false;
+
+  const now = () => new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+  const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // Mismo formato que WhatsApp: *negrita*, _cursiva_, ~tachado~ y links.
+  function fmt(text) {
+    let h = esc(text);
+    h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    h = h.replace(/\*([^*\n]+)\*/g, '<b>$1</b>');
+    h = h.replace(/(^|[\s(])_([^_\n]+)_/g, '$1<i>$2</i>');
+    h = h.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+    return h.replace(/\n/g, '<br>');
+  }
+
+  function scroll() { chat.scrollTop = chat.scrollHeight; }
+
+  function el(tag, cls, html) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  function addUser(html) {
+    const row = el('div', 'row out');
+    row.appendChild(el('div', 'bubble', html + `<span class="time">${now()} ✓✓</span>`));
+    chat.appendChild(row);
+    scroll();
+  }
+
+  function jsonBlock(payload) {
+    const d = el('details', 'json');
+    d.appendChild(el('summary', null, '{ } JSON que se enviaría a Meta'));
+    d.appendChild(el('pre', null, esc(JSON.stringify(payload, null, 2))));
+    return d;
+  }
+
+  function addBot(p) {
+    const row = el('div', 'row in');
+    let inner = '';
+
+    if (p.type === 'text') {
+      inner = fmt(p.text.body);
+      row.appendChild(el('div', 'bubble', inner + `<span class="time">${now()}</span>`));
+    } else if (p.type === 'interactive') {
+      const i = p.interactive;
+      if (i.header) inner += `<div class="hdr">${fmt(i.header.text)}</div>`;
+      inner += fmt(i.body.text);
+      if (i.footer) inner += `<div class="ftr">${fmt(i.footer.text)}</div>`;
+      const bubble = el('div', 'bubble' + (i.type === 'list' ? ' has-list' : ''), inner + `<span class="time">${now()}</span>`);
+      row.appendChild(bubble);
+
+      const btns = el('div', 'wa-btns');
+      if (i.type === 'button') {
+        for (const b of i.action.buttons) {
+          const btn = el('button', 'wa-btn', '↩ ' + esc(b.reply.title));
+          btn.onclick = () => send({ type: 'button_reply', id: b.reply.id, title: b.reply.title }, esc(b.reply.title));
+          btns.appendChild(btn);
+        }
+      } else if (i.type === 'list') {
+        const btn = el('button', 'wa-btn list-open', '☰ ' + esc(i.action.button));
+        btn.onclick = () => openList(i.action);
+        btns.appendChild(btn);
+      }
+      row.appendChild(btns);
+    }
+    row.appendChild(jsonBlock(p));
+    chat.appendChild(row);
+    scroll();
+  }
+
+  function addSystem(html) {
+    chat.appendChild(el('div', 'system', html));
+    scroll();
+  }
+
+  function openList(action) {
+    sheet.innerHTML = '';
+    const title = el('div', 'sheet-title', esc(action.button));
+    const close = el('button', null, '✕');
+    close.type = 'button';
+    close.onclick = () => overlay.classList.remove('open');
+    title.appendChild(close);
+    sheet.appendChild(title);
+    for (const s of action.sections) {
+      if (s.title) sheet.appendChild(el('div', 'section-title', esc(s.title)));
+      for (const r of s.rows) {
+        const opt = el('button', 'opt', `<div class="t">${esc(r.title)}</div>` + (r.description ? `<div class="d">${esc(r.description)}</div>` : ''));
+        opt.type = 'button';
+        opt.onclick = () => {
+          overlay.classList.remove('open');
+          send({ type: 'list_reply', id: r.id, title: r.title }, esc(r.title));
+        };
+        sheet.appendChild(opt);
+      }
+    }
+    overlay.classList.add('open');
+  }
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+  async function send(mensaje, displayHtml) {
+    if (busy) return;
+    busy = true;
+    addUser(displayHtml);
+    const typing = el('div', 'typing', 'escribiendo…');
+    chat.appendChild(typing);
+    scroll();
+    try {
+      const res = await fetch('/api/mensaje', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: FROM,
+          perfil: document.getElementById('perfil').value.trim(),
+          fechaHoy: document.getElementById('fecha').value,
+          mensaje,
+        }),
+      });
+      const data = await res.json();
+      typing.remove();
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      for (const p of data.respuestas) {
+        addBot(p);
+        await new Promise((r) => setTimeout(r, 250));
+      }
+      for (const a of data.avisosAsesor) {
+        addSystem('📨 <b>Aviso que recibiría el asesor:</b><br>' + fmt(a.text ? a.text.body : JSON.stringify(a)));
+      }
+      if (!data.respuestas.length && !data.avisosAsesor.length) {
+        addSystem('🤫 El bot no respondió (el cliente está hablando con un asesor). Escribí <b>menú</b> para reactivarlo.');
+      }
+    } catch (err) {
+      typing.remove();
+      addSystem('⚠️ <b>Error:</b> ' + esc(err.message) + '<br>¿Está corriendo <code>npm run simulador</code>?');
+    } finally {
+      busy = false;
+      input.focus();
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    send({ type: 'text', text }, fmt(text));
+  });
+
+  document.getElementById('audio').onclick = () => send({ type: 'other' }, '🎤 <i>Mensaje de voz</i>');
+
+  async function reiniciar() {
+    await fetch('/api/reiniciar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ from: FROM }) })
+      .catch(() => {});
+    chat.innerHTML = '';
+    addSystem('Escribí cualquier mensaje (por ejemplo <b>Hola</b>) para empezar, como haría un cliente.');
+    input.focus();
+  }
+  document.getElementById('reiniciar').onclick = reiniciar;
+
+  const verJson = document.getElementById('verJson');
+  verJson.onchange = () => document.getElementById('phone').classList.toggle('show-json', verJson.checked);
+
+  reiniciar(); // al abrir o recargar la página, la conversación empieza de cero
+</script>
+</body>
+</html>
