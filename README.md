@@ -171,6 +171,6 @@ Se guardan en `data/leads.jsonl` (un registro por línea con nombre, DNI, mail, 
 
 ## Créditos
 
-Este proyecto fue construido con la ayuda de **[Claude Code](https://claude.com/claude-code)**, el asistente de programación de Anthropic, que me ayudó a armar la estructura del código: la organización de los archivos, los webhooks, el manejo de la conversación y el simulador local.
+Este proyecto fue construido con la ayuda de **[Claude Code](https://claude.com/claude-code)**, el asistente de programación de Anthropic, que me ayudó a armar : la organización de los archivos, los webhooks, el manejo de la conversación y el simulador local.
 
-El flujo de la conversación, los textos, los datos del calendario académico y el funcionamiento final fueron **definidos y revisados por mí**.
+El flujo de la conversación, los textos, estructura del código, los datos del calendario académico y el funcionamiento final fueron **definidos y revisados por mí**.
